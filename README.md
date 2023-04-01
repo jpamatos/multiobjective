@@ -15,5 +15,6 @@ Matplotlib 3.6.2
 Scikit-learn 1.2.1
 
 Pymoo 0.6.0.1
+
 <br>
 Work in progress
