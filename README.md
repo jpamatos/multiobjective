@@ -1,20 +1,14 @@
-# multiobjetivo
+# multiobjective
 
-Eesse notebook foi executado usando:
+To execute this project first create a conda environment with the command:
 
-Python 3.11.2
+`conda env create -f environment.yml`
 
-Pandas 1.5.3
+A new conda environment named multiobjective will be created. It can be activated with:
 
-Keras 2.12.0rc1
+`conda activate multiobjective`
 
-Numpy 1.23.5
-
-Matplotlib 3.6.2
-
-Scikit-learn 1.2.1
-
-Pymoo 0.6.0.1
+The genectic algorithm is executed in the main.py script.
 
 <br>
 Work in progress
