@@ -6,7 +6,6 @@ class Individual:
     def __init__(self, generation: int=0) -> None:
         self.generation = generation
         self.gene = [0 if np.random.random() < 0.5 else 1 for _ in range(12)]
-        # self.eval = dict()
         self.eval = 0
     
     def _evaluate(self, X_train, X_test, y_train, y_test) -> None:
@@ -23,6 +22,7 @@ class Individual:
 
         loss, accuracy = self.model.evaluate(X_test, y_test, verbose=False)
 
+        self.loss = loss
         self.eval = accuracy
 
     def crossover(self, other_individual: Individual) -> list[Individual]:

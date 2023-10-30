@@ -14,6 +14,7 @@ class GeneticAlgorithm:
         self.X_test = X_test
         self.y_train = y_train
         self.y_test = y_test
+        self.pareto = []
 
     def init_population(self) -> None:
         for _ in range(self.population_size):
@@ -84,6 +85,16 @@ class GeneticAlgorithm:
             for individual in self.population:
                 individual._evaluate(self.X_train, self.X_test, self.y_train, self.y_test)
             
+            pareto = []
+            for individual in self.population:
+                frontier = not any((individual.loss > other_individual.loss and individual.eval < other_individual.eval) for other_individual in self.population)
+
+                if frontier:
+                    pareto.append(individual)
+
+            self.pareto.extend(pareto)
+            
+
             self.sort_population()
             self.visualize_generation()
 
@@ -91,6 +102,13 @@ class GeneticAlgorithm:
 
             self.best_individual(self.population[0])
         
+        self.pareto_frontier = []
+        for individual in self.pareto:
+            frontier = not any((individual.loss > other_individual.loss and individual.eval < other_individual.eval) for other_individual in self.pareto)
+
+            if frontier:
+                self.pareto_frontier.append(individual)
+
         print(f"Best Solution -> G:{self.best_solution.generation} -> ",
               f"Eval: {round(self.best_solution.eval, 3)}",
               f" Gene: {self.best_solution.gene}")
