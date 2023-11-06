@@ -1,6 +1,7 @@
 from __future__ import annotations
 import numpy as np
 from src.individual import Individual
+from tqdm import tqdm
 
 class GeneticAlgorithm:
     def __init__(self, population_size: int, X_train, X_test, y_train, y_test) -> None:
@@ -56,8 +57,8 @@ class GeneticAlgorithm:
 
         print("Generation 0")
 
-        for individual in self.population:
-            individual._evaluate(self.X_train, self.X_test, self.y_train, self.y_test)
+        for i in tqdm(range(len(self.population))):
+            self.population[i]._evaluate(self.X_train, self.X_test, self.y_train, self.y_test)
         
         self.sort_population()
 
@@ -82,8 +83,8 @@ class GeneticAlgorithm:
 
             self.population = list(new_population)
 
-            for individual in self.population:
-                individual._evaluate(self.X_train, self.X_test, self.y_train, self.y_test)
+            for i in tqdm(range(len(self.population))):
+                self.population._evaluate(self.X_train, self.X_test, self.y_train, self.y_test)
             
             pareto = []
             for individual in self.population:
