@@ -18,11 +18,26 @@ def main():
     train_labels = to_categorical(train_labels)
     test_labels = to_categorical(test_labels)
 
-    ga = GeneticAlgorithm(6, train_images, test_images, train_labels, test_labels)
+    first_objective = ("accuracy", 0.05)
+    second_objective = ("latency", 0.15)
+
+    ga = GeneticAlgorithm(
+        population_size=12,
+        X_train=train_images,
+        X_test=test_images,
+        y_train=train_labels,
+        y_test=test_labels,
+        first_objective=first_objective[0],
+        frist_threshold=first_objective[1],
+        second_objective=second_objective[0],
+        second_threshold=second_objective[1]
+    )
 
     result = ga.solve(generations=10)
 
     print(result)
+
+    result.model.save(f"{first_objective[0]}_{second_objective[0]}.h5")
 
 if __name__ == "__main__":
     main()

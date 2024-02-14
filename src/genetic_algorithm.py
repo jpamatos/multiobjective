@@ -2,9 +2,10 @@ from __future__ import annotations
 import numpy as np
 from src.individual import Individual
 from tqdm import tqdm
+import matplotlib.pyplot as plt
 
 class GeneticAlgorithm:
-    def __init__(self, population_size: int, X_train, X_test, y_train, y_test) -> None:
+    def __init__(self, population_size: int, X_train, X_test, y_train, y_test, first_objective, frist_threshold, second_objective, second_threshold) -> None:
         self.population_size = population_size
         self.population = []
         self.generation = 0
@@ -17,6 +18,10 @@ class GeneticAlgorithm:
         self.y_test = y_test
         self.pareto = []
         self.frontier = []
+        self.fo = first_objective
+        self.fo_threshold = frist_threshold
+        self.so = second_objective
+        self.so_threshold = second_threshold
 
     def init_population(self) -> None:
         for _ in range(self.population_size):
@@ -24,34 +29,70 @@ class GeneticAlgorithm:
         self.best_solution = self.population[0]
 
     def sort_population(self) -> None:
-        self.population = sorted(self.population, key=lambda individual: individual.eval, reverse=True)
+        self.population = sorted(self.population, key=lambda individual: individual.metrics[self.fo][0]*individual.metrics[self.fo][1], reverse=True)
 
-    def best_individual(self) -> Individual:
-        maximum = max(self.pareto, key=lambda x: x.eval)
-        threshold_first = maximum.eval * 0.05
-        interval = [individual for individual in self.pareto if maximum.eval - threshold_first <= maximum.eval <= maximum.eval + threshold_first]
-        minimum = min(interval, key=lambda x:x.loss)
-        threshold_second = minimum.loss * 0.05
-        interval2 = [individual for individual in interval if minimum.loss - threshold_second <= minimum.loss <= minimum.loss + threshold_second]
+    def best_individual(self, pareto) -> Individual:
+        first_minimum = min(pareto, key=lambda x: x.metrics[self.fo][0]*x.metrics[self.fo][1])
+        first_threshold = first_minimum.metrics[self.fo][1] * self.fo_threshold
+        low_bound = first_minimum.metrics[self.fo][0]*first_minimum.metrics[self.fo][1] - first_threshold
+        high_bound = first_minimum.metrics[self.fo][0]*first_minimum.metrics[self.fo][1] + first_threshold
+        interval = [
+            individual for individual in pareto if low_bound <= individual.metrics[self.fo][0]*individual.metrics[self.fo][1] <= high_bound
+        ]
+        second_minimum = min(interval, key=lambda x: x.metrics[self.so][0]*x.metrics[self.so][1])
+        second_threshold = second_minimum.metrics[self.so][1] * self.so_threshold
+        low_bound = second_minimum.metrics[self.so][0]*second_minimum.metrics[self.so][1] - second_threshold
+        high_bound = second_minimum.metrics[self.so][0]*second_minimum.metrics[self.so][1] + second_threshold
+        interval2 = [
+            individual for individual in interval if low_bound <= individual.metrics[self.so][0]*individual.metrics[self.so][1] <= high_bound
+        ]
         if len(interval2) == 1:
-            return minimum
+            return second_minimum
         else:
-            return max(interval2, key=lambda x: x.eval)
+            return min(interval2, key=lambda x: x.metrics[self.fo][0]*x.metrics[self.fo][1])
 
     def sum_eval(self) -> float:
         sum = 0
         for individual in self.population:
-            sum += individual.eval
+            sum += individual.metrics["accuracy"][1]
         return sum
 
     def select_parent(self, size:int) -> int:
         return np.random.randint(size)
 
-    def visualize_generation(self) -> None:
-        best = self.population[0]
-        print(f"G:{self.population[0].generation} -> ",
-              f"Eval: {round(best.eval, 2)}",
+    def visualize_generation(self, best) -> None:
+        print(f"G:{best.generation}:\n",
+              f"{self.fo}: {round(best.metrics[self.fo][1], 2)}\n",
+              f"{self.so}: {round(best.metrics[self.so][1], 2)}\n",
               f" Gene: {best.gene}")
+
+    def pareto_result(self):
+        frontier_fo = []
+        frontier_so = []
+        for individual in self.pareto_frontier:
+            frontier_fo.append(individual.metrics[self.fo][0]*individual.metrics[self.fo][1])
+            frontier_so.append(individual.metrics[self.so][0]*individual.metrics[self.so][1])
+        pareto_fo = []
+        pareto_so = []
+        for individual in self.frontier:
+            pareto_fo.append(individual.metrics[self.fo][0]*individual.metrics[self.fo][1])
+            pareto_so.append(individual.metrics[self.so][0]*individual.metrics[self.so][1])
+        self.best_solution = self.best_individual(self.pareto_frontier)
+        plt.figure(figsize=(10,6), dpi=800)
+        plt.plot(pareto_so, pareto_fo, color="blue", marker="*", linestyle="None", label="Dominated Solutions")
+        plt.plot(frontier_so, frontier_fo, color="red", marker="*", linestyle="None", label="Non Dominated Solutions")
+        plt.plot(
+            self.best_solution.metrics[self.so][0]*self.best_solution.metrics[self.so][1],
+            self.best_solution.metrics[self.fo][0]*self.best_solution.metrics[self.fo][1],
+            color="green",
+            marker="*",
+            linestyle="None",
+            label="Chosen Solution"
+        )
+        plt.xlabel(f"{self.so}")
+        plt.ylabel(f"{self.fo}")
+        plt.title(f"{self.fo} x {self.so}")
+        plt.legend()
 
     def solve(self, mutation_rate=0.05, generations=0) -> list[int]:
         self.init_population()
@@ -64,7 +105,14 @@ class GeneticAlgorithm:
 
         for i in range(generations):
             for individual in self.population:
-                frontier = not any((individual.loss > other_individual.loss and individual.eval < other_individual.eval) for other_individual in self.population)
+                frontier = not any(
+                    (
+                        individual.metrics[self.fo][0] * individual.metrics[self.fo][1] >
+                        other_individual.metrics[self.fo][0] * other_individual.metrics[self.fo][1] and
+                        individual.metrics[self.so][0] * individual.metrics[self.so][1] >
+                        other_individual.metrics[self.so][0] * other_individual.metrics[self.so][1]
+                    ) for other_individual in self.population
+                )
 
                 if frontier:
                     self.pareto.append(individual)
@@ -89,10 +137,8 @@ class GeneticAlgorithm:
 
                     new_population.append(children[0].mutation(mutation_rate))
                     new_population.append(children[1].mutation(mutation_rate))
-                    self.best_solution = self.best_individual()
-            print(f"Best Solution -> G:{self.best_solution.generation} -> ",
-              f"Eval: {round(self.best_solution.eval, 3)}",
-              f" Gene: {self.best_solution.gene}")
+                    self.best_solution = self.best_individual(self.pareto)
+            self.visualize_generation(self.best_solution)
             print(f"Generation {i + 1}")
 
             self.population = list(new_population)
@@ -104,9 +150,17 @@ class GeneticAlgorithm:
 
         self.pareto_frontier = []
         for individual in self.frontier:
-            frontier = not any((individual.loss > other_individual.loss and individual.eval < other_individual.eval) for other_individual in self.frontier)
+            frontier = not any(
+                (
+                    individual.metrics[self.fo][0] * individual.metrics[self.fo][1] >
+                    other_individual.metrics[self.fo][0] * other_individual.metrics[self.fo][1] and
+                    individual.metrics[self.so][0] * individual.metrics[self.so][1] >
+                    other_individual.metrics[self.so][0] * other_individual.metrics[self.so][1]
+                ) for other_individual in self.frontier
+            )
 
             if frontier:
                 self.pareto_frontier.append(individual)
+        self.pareto_result()
 
         return self.best_solution
