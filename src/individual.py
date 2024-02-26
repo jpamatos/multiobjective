@@ -32,7 +32,13 @@ class Individual:
         self.genome = [0 if np.random.random() < 0.5 else 1 for _ in range(17)]
         self.metrics = {}
 
-    def _evaluate(self, X_train, X_test, y_train, y_test) -> None:
+    def _evaluate(
+        self,
+        X_train: np.ndarray,
+        X_test: np.ndarray,
+        y_train: np.ndarray,
+        y_test: np.ndarray,
+    ) -> None:
         """
         Evaluate the individual's neural network model using the provided data.
 
@@ -150,7 +156,7 @@ class Individual:
         child1 = other_individual.genome[0:cut] + self.genome[cut::]
         child2 = self.genome[0:cut] + other_individual.genome[cut::]
 
-        # Represents the advancement of the generation 
+        # Represents the advancement of the generation
         children = [
             Individual(self.generation + 1),
             Individual(self.generation + 1),
