@@ -3,6 +3,8 @@ import numpy as np
 import keras
 from sklearn.metrics import f1_score
 from time import time
+import tensorflow as tf
+
 
 
 class Individual:
@@ -57,6 +59,11 @@ class Individual:
         Example:
             individual._evaluate(X_train, X_test, y_train, y_test)
         """
+        # Set seed for reproductibility of the models with the same genome
+        seed = int("".join(map(str, self.genome)), 2)
+        np.random.seed(seed)
+        tf.random.set_seed(seed)
+
         self.model = keras.Sequential()
         self.model.add(
             keras.layers.Conv2D(
@@ -89,11 +96,11 @@ class Individual:
 
         self.model.add(keras.layers.Flatten())
         for _ in range(
-            int("".join(map(str, self.genome[9:11])), 2) + 1
+            int("".join(map(str, self.genome[4:6])), 2) + 1
         ):  # Maps the number of dense layers
             self.model.add(
-                keras.keras.layers.Dense(
-                    int("".join(map(str, self.genome[11:17])), 2)
+                keras.layers.Dense(
+                    int("".join(map(str, self.genome[6:12])), 2)
                     + 1,  # Maps the number neurons in the dense layers
                     activation="relu",
                 )
@@ -190,6 +197,6 @@ class Individual:
     def __repr__(self):
         return f"""Generation: {self.generation}
 Gene: {self.genome}
-{int("".join(map(str, self.genome[0:2])), 2) + 1} camadas convolucionais com {int("".join(map(str, self.genome[2:9])), 2) + 1} neurons
-{int("".join(map(str, self.genome[9:11])), 2) + 1} camadas densas com {int("".join(map(str, self.genome[11:17])), 2) + 1} neurons
+{int("".join(map(str, self.genome[0:2])), 2) + 1} camadas convolucionais com {int("".join(map(str, self.genome[2:4])), 2) + 1} neurons
+{int("".join(map(str, self.genome[4:6])), 2) + 1} camadas densas com {int("".join(map(str, self.genome[6:12])), 2) + 1} neurons
 """

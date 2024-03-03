@@ -3,6 +3,7 @@ from src.individual import Individual
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 from typing import Tuple
+import tensorflow as tf
 
 
 class GeneticAlgorithm:
@@ -184,7 +185,7 @@ class GeneticAlgorithm:
             f" Genome: {best.genome}",
         )
 
-    def pareto_result(self):
+    def pareto_result(self) -> None:
         """Visualizes the Pareto frontier and the best solution.
 
         Calculates the fitness values for individuals in the Pareto frontier and the frontier.
@@ -214,7 +215,7 @@ class GeneticAlgorithm:
                 individual.metrics[self.so][0] * individual.metrics[self.so][1]
             )
         self.best_solution = self.best_individual(self.pareto_frontier)
-        plt.figure(figsize=(10, 6), dpi=800)
+        plt.figure(figsize=(10, 6), dpi=120)
         plt.plot(
             pareto_so,
             pareto_fo,
@@ -239,7 +240,7 @@ class GeneticAlgorithm:
             self.best_solution.metrics[self.fo][0]
             * self.best_solution.metrics[self.fo][1],
             color="green",
-            marker="*",
+            marker="s",
             linestyle="None",
             label="Chosen Solution",
         )
@@ -247,6 +248,7 @@ class GeneticAlgorithm:
         plt.ylabel(f"{self.fo}")
         plt.title(f"{self.fo} x {self.so}")
         plt.legend()
+        plt.show()
 
     def solve(
         self, mutation_rate: float = 0.05, generations: int = 0
@@ -275,6 +277,10 @@ class GeneticAlgorithm:
             self.population[i]._evaluate(
                 self.X_train, self.X_test, self.y_train, self.y_test
             )
+
+        # Reset the seeds implemented by the individuals
+        np.random.seed()
+        tf.random.set_seed(None)
 
         for i in range(generations):
             for individual in self.population:
