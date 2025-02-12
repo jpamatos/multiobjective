@@ -1,10 +1,18 @@
 from __future__ import annotations
 import numpy as np
 import keras
-from sklearn.metrics import f1_score
+from sklearn.metrics import f1_score, roc_auc_score
 from time import time
 import tensorflow as tf
 
+
+GENOME_SIZE = 15
+CONV_LAYERS_GENES = slice(0, 2)
+NEURONS_CONV_GENES = slice(2, 4)
+DENSE_LAYERS_GENES = slice(4, 6)
+NEURONS_DENSE_GENES = slice(6, 12)
+DROPOUT_GENES = slice(13, 15)
+NUM_CLASSES = 9
 
 
 class Individual:
@@ -31,8 +39,19 @@ class Individual:
             fitness (float): The fitness score of the individual.
         """
         self.generation = generation
-        self.genome = [0 if np.random.random() < 0.5 else 1 for _ in range(17)]
+        self.genome = np.random.randint(0, 2, GENOME_SIZE).tolist()
         self.metrics = {}
+
+    def _decode_gene(self, gene_range: slice) -> int:
+        """_summary_
+
+        Args:
+            gene_range (slice): _description_
+
+        Returns:
+            int: _description_
+        """
+        return int("".join(map(str, self.genome[gene_range])), 2)
 
     def _evaluate(
         self,
@@ -67,45 +86,37 @@ class Individual:
         self.model = keras.Sequential()
         self.model.add(
             keras.layers.Conv2D(
-                2
-                ** (
-                    int("".join(map(str, self.genome[2:4])), 2) + 4
-                ),  # Maps the number of neurons in the first conv layer
+                2 ** (self._decode_gene(NEURONS_CONV_GENES) + 5),  # Maps the number of neurons of all conv layers
                 (3, 3),
                 activation="relu",
-                input_shape=(28, 28, 1),
+                input_shape=(28, 28, 3),
+                padding="same"
             )
         )
-        self.model.add(keras.layers.MaxPooling2D((2, 2)))
-        for i in range(
-            1, int("".join(map(str, self.genome[0:2])), 2)
-        ):  # Maps the number of conv layers
-            self.model.add(
-                keras.layers.Conv2D(
-                    2
-                    ** (
-                        int("".join(map(str, self.genome[2:4])), 2) + 4
-                    ),  # Maps the number of neurons of all conv layers
-                    (3, 3),
-                    activation="relu",
-                )
-            )
-            # Create max pool layers after a odd number of layers
-            if (i % 2) != 0:
-                self.model.add(keras.layers.MaxPooling2D((2, 2)))
+        for _ in range(3):
+          for _ in range(4):
+              self.model.add(
+                  keras.layers.Conv2D(
+                      2 ** (self._decode_gene(NEURONS_CONV_GENES) + 5),  
+                      (3, 3),
+                      activation="relu",
+                      padding="same"
+                  )
+              )
+          self.model.add(keras.layers.MaxPooling2D((2, 2)))
+          self.model.add(keras.layers.Dropout(self._decode_gene(DROPOUT_GENES) * 0.25))
 
         self.model.add(keras.layers.Flatten())
         for _ in range(
-            int("".join(map(str, self.genome[4:6])), 2) + 1
+            self._decode_gene(DENSE_LAYERS_GENES) + 1
         ):  # Maps the number of dense layers
             self.model.add(
                 keras.layers.Dense(
-                    int("".join(map(str, self.genome[6:12])), 2)
-                    + 1,  # Maps the number neurons in the dense layers
+                    self._decode_gene(NEURONS_DENSE_GENES) + 1,  # Maps the number neurons in the dense layers
                     activation="relu",
                 )
             )
-        self.model.add(keras.layers.Dense(10, activation="softmax"))
+        self.model.add(keras.layers.Dense(NUM_CLASSES, activation="softmax"))
 
         self.model.compile(
             loss="categorical_crossentropy",
@@ -116,7 +127,7 @@ class Individual:
             X_train,
             y_train,
             epochs=10,
-            batch_size=64,
+            batch_size=16,
             validation_split=0.2,
             verbose=False,
         )
@@ -131,9 +142,9 @@ class Individual:
             sum([np.linalg.norm(w) for w in weights]),
         )
         start = time()
-        y_pred = self.model.predict(X_test, verbose=False)
+        y_prob = self.model.predict(X_test, verbose=False)
         end = time()
-        y_pred = np.argmax(y_pred, axis=1)
+        y_pred = np.argmax(y_prob, axis=1)
         y_test = np.argmax(y_test, axis=1)
         self.metrics["f1_score"] = (
             -1,
@@ -142,6 +153,13 @@ class Individual:
 
         # Latency is calculated by the avarege execution time
         self.metrics["latency"] = (1, (end - start) / 3000)
+
+        try:
+            auc_score = roc_auc_score(y_test, y_prob, multi_class="ovr")
+        except ValueError:
+            auc_score = 0.0  # Se não for possível calcular, assume-se 0
+
+        self.metrics["auc"] = (-1, auc_score)
 
     def crossover(self, other_individual: Individual) -> list[Individual]:
         """Performs crossover between the current individual and another individual.
@@ -197,6 +215,6 @@ class Individual:
     def __repr__(self):
         return f"""Generation: {self.generation}
 Gene: {self.genome}
-{int("".join(map(str, self.genome[0:2])), 2) + 1} camadas convolucionais com {int("".join(map(str, self.genome[2:4])), 2) + 1} neurons
-{int("".join(map(str, self.genome[4:6])), 2) + 1} camadas densas com {int("".join(map(str, self.genome[6:12])), 2) + 1} neurons
+{self._decode_gene(CONV_LAYERS_GENES) + 1} camadas convolucionais com {2 ** (self._decode_gene(NEURONS_CONV_GENES) + 4)} neurons
+{self._decode_gene(DENSE_LAYERS_GENES) + 1} camadas densas com {self._decode_gene(NEURONS_DENSE_GENES) + 1} neurons
 """
