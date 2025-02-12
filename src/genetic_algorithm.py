@@ -1,9 +1,11 @@
-import numpy as np
-from src.individual import Individual
-from tqdm import tqdm
-import matplotlib.pyplot as plt
 from typing import Tuple
+
+import numpy as np
+from tqdm import tqdm
 import tensorflow as tf
+import matplotlib.pyplot as plt
+
+from src.individual import Individual
 
 
 class GeneticAlgorithm:
@@ -75,6 +77,18 @@ class GeneticAlgorithm:
             self.population.append(Individual())
         self.best_solution = self.population[0]
 
+    def calculate_fitness(self, individual: Individual, objective: str) -> float:
+        """_summary_
+
+        Args:
+            individual (Individual): _description_
+            objective (str): _description_
+
+        Returns:
+            float: _description_
+        """
+        return individual.metrics[objective][0] * individual.metrics[objective][1]
+
     def sort_population(self) -> None:
         """Sorts the population based on a specified fitness metric.
 
@@ -83,11 +97,16 @@ class GeneticAlgorithm:
         """
         self.population = sorted(
             self.population,
-            key=lambda individual: individual.metrics[self.fo][0]
-            * individual.metrics[self.fo][1],
+            key=lambda individual: self.calculate_fitness(individual, self.fo),
             reverse=True,
         )
-
+    
+    def _evaluate_population(self) -> None:
+        """_summary_
+        """
+        for individual in self.population:
+            individual.evaluate(self.X_train, self.X_test, self.y_train, self.y_test)
+    
     def best_individual(self, pareto: list[Individual]) -> Individual:
         """Finds the best individual from a Pareto front based on specified fitness metrics.
 
@@ -103,16 +122,8 @@ class GeneticAlgorithm:
 
         # Threshold is min + threshold(%)
         first_threshold = first_minimum.metrics[self.fo][1] * self.fo_threshold
-        low_bound = (
-            first_minimum.metrics[self.fo][0]
-            * first_minimum.metrics[self.fo][1]
-            - first_threshold
-        )
-        high_bound = (
-            first_minimum.metrics[self.fo][0]
-            * first_minimum.metrics[self.fo][1]
-            + first_threshold
-        )
+        low_bound = self.calculate_fitness(first_minimum, self.fo) - first_threshold
+        high_bound = self.calculate_fitness(first_minimum, self.fo) + first_threshold
 
         # Subset containing the solutions between the minimum of the first objective and its threshold
         interval = [
@@ -129,16 +140,8 @@ class GeneticAlgorithm:
         second_threshold = (
             second_minimum.metrics[self.so][1] * self.so_threshold
         )
-        low_bound = (
-            second_minimum.metrics[self.so][0]
-            * second_minimum.metrics[self.so][1]
-            - second_threshold
-        )
-        high_bound = (
-            second_minimum.metrics[self.so][0]
-            * second_minimum.metrics[self.so][1]
-            + second_threshold
-        )
+        low_bound = self.calculate_fitness(second_minimum, self.so) - second_threshold
+        high_bound = self.calculate_fitness(second_minimum, self.so) + second_threshold
 
         # Subset containing the solutions between the minimum of the second objective and its threshold
         interval2 = [
@@ -199,21 +202,13 @@ class GeneticAlgorithm:
 
         # Separate the non dominated solutions from the dominated solutions
         for individual in self.pareto_frontier:
-            frontier_fo.append(
-                individual.metrics[self.fo][0] * individual.metrics[self.fo][1]
-            )
-            frontier_so.append(
-                individual.metrics[self.so][0] * individual.metrics[self.so][1]
-            )
+            frontier_fo.append(self.calculate_fitness(individual, self.fo))
+            frontier_so.append(self.calculate_fitness(individual, self.so))
         pareto_fo = []
         pareto_so = []
         for individual in self.frontier:
-            pareto_fo.append(
-                individual.metrics[self.fo][0] * individual.metrics[self.fo][1]
-            )
-            pareto_so.append(
-                individual.metrics[self.so][0] * individual.metrics[self.so][1]
-            )
+            pareto_fo.append(self.calculate_fitness(individual, self.fo))
+            pareto_so.append(self.calculate_fitness(individual, self.so))
         self.best_solution = self.best_individual(self.pareto_frontier)
         plt.figure(figsize=(10, 6), dpi=120)
         plt.plot(
@@ -235,10 +230,8 @@ class GeneticAlgorithm:
 
         # Show the best solution of the genetic algorithm (in green)
         plt.plot(
-            self.best_solution.metrics[self.so][0]
-            * self.best_solution.metrics[self.so][1],
-            self.best_solution.metrics[self.fo][0]
-            * self.best_solution.metrics[self.fo][1],
+            self.calculate_fitness(individual, self.so),
+            self.calculate_fitness(individual, self.fo),
             color="green",
             marker="s",
             linestyle="None",
@@ -273,10 +266,7 @@ class GeneticAlgorithm:
 
         print("Generation 0")
 
-        for i in tqdm(range(len(self.population))):
-            self.population[i]._evaluate(
-                self.X_train, self.X_test, self.y_train, self.y_test
-            )
+        self._evaluate_population()
 
         # Reset the seeds implemented by the individuals
         np.random.seed()
@@ -289,14 +279,10 @@ class GeneticAlgorithm:
                 # The logic is given by: not exists y | f1(x) > f1(y) and f2(x) > f2(y)
                 frontier = not any(
                     (
-                        individual.metrics[self.fo][0]
-                        * individual.metrics[self.fo][1]
-                        > other_individual.metrics[self.fo][0]
-                        * other_individual.metrics[self.fo][1]
-                        and individual.metrics[self.so][0]
-                        * individual.metrics[self.so][1]
-                        > other_individual.metrics[self.so][0]
-                        * other_individual.metrics[self.so][1]
+                        self.calculate_fitness(individual, self.fo)
+                        > self.calculate_fitness(other_individual, self.fo)
+                        and self.calculate_fitness(individual, self.so)
+                        > self.calculate_fitness(other_individual, self.so)
                     )
                     for other_individual in self.population
                 )
@@ -338,10 +324,7 @@ class GeneticAlgorithm:
 
             self.population = list(new_population)
 
-            for i in tqdm(range(len(self.population))):
-                self.population[i]._evaluate(
-                    self.X_train, self.X_test, self.y_train, self.y_test
-                )
+            self._evaluate_population()
 
         self.frontier = [item for row in self.frontier for item in row]
 
@@ -350,14 +333,10 @@ class GeneticAlgorithm:
         for individual in self.frontier:
             frontier = not any(
                 (
-                    individual.metrics[self.fo][0]
-                    * individual.metrics[self.fo][1]
-                    > other_individual.metrics[self.fo][0]
-                    * other_individual.metrics[self.fo][1]
-                    and individual.metrics[self.so][0]
-                    * individual.metrics[self.so][1]
-                    > other_individual.metrics[self.so][0]
-                    * other_individual.metrics[self.so][1]
+                    self.calculate_fitness(individual, self.fo)
+                    > self.calculate_fitness(other_individual, self.fo)
+                    and self.calculate_fitness(individual, self.so)
+                    > self.calculate_fitness(other_individual, self.so)
                 )
                 for other_individual in self.frontier
             )
