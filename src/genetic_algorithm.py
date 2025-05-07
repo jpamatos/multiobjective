@@ -274,7 +274,7 @@ class GeneticAlgorithm:
         print("Generation 0")
 
         for i in tqdm(range(len(self.population))):
-            self.population[i]._evaluate(
+            self.population[i].evaluate(
                 self.X_train, self.X_test, self.y_train, self.y_test
             )
 
@@ -339,7 +339,7 @@ class GeneticAlgorithm:
             self.population = list(new_population)
 
             for i in tqdm(range(len(self.population))):
-                self.population[i]._evaluate(
+                self.population[i].evaluate(
                     self.X_train, self.X_test, self.y_train, self.y_test
                 )
 
