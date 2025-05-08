@@ -1,3 +1,6 @@
+My final year project:
+[Multiobjective AutoML](http://www.monografias.ufop.br/handle/35400000/6699)
+
 # 🧬 Multiobjective Genetic Algorithm
 
 To execute this project first create a conda environment with the command:
