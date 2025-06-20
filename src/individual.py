@@ -6,12 +6,41 @@ from time import time
 import tensorflow as tf
 
 
-GENOME_SIZE = 15
-CONV_LAYERS_GENES = slice(0, 2)
-NEURONS_CONV_GENES = slice(2, 4)
-DENSE_LAYERS_GENES = slice(4, 6)
-NEURONS_DENSE_GENES = slice(6, 12)
-DROPOUT_GENES = slice(13, 15)
+CONV_LAYERS_GENES = {
+    "0": 3,
+    "1": 4
+}
+
+NEURONS_CONV_GENES = {
+    "000": 32,
+    "001": 64,
+    "010": 96,
+    "011": 128,
+    "100": 192,
+    "101": 256,
+    "110": 384,
+    "111": 512
+}
+
+DROPOUT_GENES = {
+    "00": 0,
+    "01": 0.25,
+    "10": 0.50,
+    "11": 0.75
+}
+
+NEURONS_DENSE_GENES = {
+    "00": 32,
+    "01": 64,
+    "10": 128,
+    "11": 286
+}
+
+GENOME_SIZE = 8
+CONV_LAYERS_SLICE = slice(0, 1)
+NEURONS_CONV_SLICE = slice(1, 4)
+DROPOUT_SLICE = slice(4, 6)
+NEURONS_DENSE_SLICE = slice(6, 8)
 NUM_CLASSES = 9
 
 
@@ -42,7 +71,7 @@ class Individual:
         self.genome = np.random.randint(0, 2, GENOME_SIZE).tolist()
         self.metrics = {}
 
-    def _decode_gene(self, gene_range: slice) -> int:
+    def _decode_gene(self, gene_map: dict, gene_range: slice) -> int:
         """_summary_
 
         Args:
@@ -51,7 +80,7 @@ class Individual:
         Returns:
             int: _description_
         """
-        return int("".join(map(str, self.genome[gene_range])), 2)
+        return gene_map["".join(map(str, self.genome[gene_range]))]
 
     def _evaluate(
         self,
@@ -86,36 +115,33 @@ class Individual:
         self.model = keras.Sequential()
         self.model.add(
             keras.layers.Conv2D(
-                2 ** (self._decode_gene(NEURONS_CONV_GENES) + 5),  # Maps the number of neurons of all conv layers
+                self._decode_gene(NEURONS_CONV_GENES, NEURONS_CONV_SLICE),  # Maps the number of neurons of all conv layers
                 (3, 3),
                 activation="relu",
                 input_shape=(28, 28, 3),
                 padding="same"
             )
         )
-        for _ in range(3):
-          for _ in range(4):
-              self.model.add(
-                  keras.layers.Conv2D(
-                      2 ** (self._decode_gene(NEURONS_CONV_GENES) + 5),  
-                      (3, 3),
-                      activation="relu",
-                      padding="same"
-                  )
-              )
-          self.model.add(keras.layers.MaxPooling2D((2, 2)))
-          self.model.add(keras.layers.Dropout(self._decode_gene(DROPOUT_GENES) * 0.25))
-
-        self.model.add(keras.layers.Flatten())
-        for _ in range(
-            self._decode_gene(DENSE_LAYERS_GENES) + 1
-        ):  # Maps the number of dense layers
+        for _ in range(self._decode_gene(CONV_LAYERS_GENES, CONV_LAYERS_SLICE)):
             self.model.add(
-                keras.layers.Dense(
-                    self._decode_gene(NEURONS_DENSE_GENES) + 1,  # Maps the number neurons in the dense layers
+                keras.layers.Conv2D(
+                    self._decode_gene(NEURONS_CONV_GENES, NEURONS_CONV_SLICE),  
+                    (3, 3),
                     activation="relu",
+                    padding="same"
                 )
             )
+            self.model.add(keras.layers.MaxPooling2D((2, 2)))
+            self.model.add(keras.layers.Dropout(self._decode_gene(DROPOUT_GENES, DROPOUT_SLICE)))
+
+        self.model.add(keras.layers.Flatten())
+
+        self.model.add(
+            keras.layers.Dense(
+                self._decode_gene(NEURONS_DENSE_GENES, NEURONS_DENSE_SLICE),  # Maps the number neurons in the dense layers
+                activation="relu",
+            )
+        )
         self.model.add(keras.layers.Dense(NUM_CLASSES, activation="softmax"))
 
         self.model.compile(
@@ -215,6 +241,6 @@ class Individual:
     def __repr__(self):
         return f"""Generation: {self.generation}
 Gene: {self.genome}
-{self._decode_gene(CONV_LAYERS_GENES) + 1} camadas convolucionais com {2 ** (self._decode_gene(NEURONS_CONV_GENES) + 4)} neurons
-{self._decode_gene(DENSE_LAYERS_GENES) + 1} camadas densas com {self._decode_gene(NEURONS_DENSE_GENES) + 1} neurons
+{self._decode_gene(CONV_LAYERS_GENES, CONV_LAYERS_SLICE)} camadas convolucionais com {self._decode_gene(NEURONS_CONV_GENES, NEURONS_CONV_SLICE)} neurons
+1 camada densa com {self._decode_gene(NEURONS_DENSE_GENES, NEURONS_DENSE_SLICE)} neurons
 """
