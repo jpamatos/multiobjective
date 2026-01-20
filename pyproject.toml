@@ -1,0 +1,54 @@
+[project]
+name = "multiobjective"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "loguru>=0.7.3",
+    "matplotlib>=3.10.8",
+    "numpy>=2.4.1",
+    "scikit-learn>=1.8.0",
+    "torch>=2.9.1",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.2",
+    "ruff>=0.14.13",
+]
+
+[tool.ruff]
+line-length = 88
+target-version = "py310"
+fix = true
+show-fixes = true
+
+# Files / folders to ignore
+exclude = [
+    ".venv",
+    "__pycache__",
+    "build",
+    "dist",
+]
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "F",    # pyflakes
+    "I",    # isort (import sorting)
+    "B",    # flake8-bugbear
+    "UP",   # pyupgrade
+    "N",   # pep8-naming
+    "SIM", # simplify
+    "C4",  # comprehensions
+]
+
+ignore = [
+    "E501",  # line length handled by formatter
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "auto"
