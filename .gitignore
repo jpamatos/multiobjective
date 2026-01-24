@@ -1,0 +1,61 @@
+# =========================
+# Python
+# =========================
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+
+# Packaging
+build/
+dist/
+wheels/
+*.egg-info/
+.eggs/
+
+
+# =========================
+# Virtual environments
+# =========================
+.venv/
+venv/
+.env/
+
+
+# =========================
+# Ruff
+# =========================
+.ruff_cache/
+
+
+# =========================
+# Jupyter
+# =========================
+.ipynb_checkpoints/
+
+
+# =========================
+# OS files
+# =========================
+.DS_Store
+Thumbs.db
+
+
+# =========================
+# ML / Experiments artifacts
+# =========================
+/data/
+/datasets/
+/models/
+/checkpoints/
+/runs/
+/mlruns/
+/outputs/
+
+
+# =========================
+# Environment variables
+# =========================
+.env
+.env.*
