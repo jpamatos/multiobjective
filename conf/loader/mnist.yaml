@@ -1,0 +1,4 @@
+_target_: multiobjective.data.mnist.MNISTLoader
+
+train_size: 300
+test_size: 100
