@@ -6,12 +6,15 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "numpy>=2.4.1",
+    "scikit-learn>=1.8.0",
     "torch>=2.10.0",
+    "torchvision>=0.25.0",
 ]
 
 [dependency-groups]
 dev = [
     "pytest>=9.0.2",
+    "pytest-cov>=7.0.0",
     "ruff>=0.14.14",
 ]
 
@@ -51,3 +54,9 @@ ignore = [
 quote-style = "double"
 indent-style = "space"
 line-ending = "auto"
+
+[tool.coverage.run]
+omit = [
+"*/protocols.py",
+]
+
