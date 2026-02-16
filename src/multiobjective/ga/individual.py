@@ -13,8 +13,7 @@ from multiobjective.utils.decoder import GenomeDecoder
 
 
 class Individual:
-    metrics: dict[str, tuple[int, float]]
-    model: Classifier | None
+    model: nn.Module
     hyperparams: dict | None
 
     def __init__(
@@ -51,7 +50,7 @@ class Individual:
         }
 
 
-    def _build_model(self) -> Classifier:
+    def _build_model(self) -> nn.Module:
         self.hyperparams = self._decode_genome()
 
         return hydra.utils.instantiate(
@@ -91,6 +90,7 @@ class Individual:
 
         # -------- training --------
         model.train()
+        loss = torch.tensor(0.0)
         for _ in range(epochs):
             for x, y in train_loader:
                 x, y = x.to(device), y.to(device)
